@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Secure Group Chat</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+      }
+      #login-section, #chat-section {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      #login-section {
+        border: 1px solid #ccc;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+      #chat-section {
+        display: none;
+      }
+      #messages {
+        border: 1px solid #ccc;
+        height: 300px;
+        overflow-y: scroll;
+        margin-bottom: 15px;
+        padding: 10px;
+      }
+      #messageInput {
+        width: 70%;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Secure Group Chat (E2EE)</h1>
+
+    <!-- Simple login form: username and shared passphrase -->
+    <div id="login-section">
+      <h2>Enter Username & Passphrase</h2>
+      <div>
+        <label for="username">Username:</label><br>
+        <input type="text" id="username" placeholder="e.g. Alice" autocomplete="off">
+      </div>
+      <br>
+      <div>
+        <label for="passphrase">Shared Passphrase (must match among friends):</label><br>
+        <input type="password" id="passphrase" placeholder="e.g. superSecret123" autocomplete="off">
+      </div>
+      <br>
+      <button id="joinBtn">Join Chat</button>
+    </div>
+
+    <!-- Chat UI: hidden by default until you join -->
+    <div id="chat-section">
+      <h2>Chat Room</h2>
+      <div id="messages"></div>
+      <form id="messageForm">
+        <input id="messageInput" placeholder="Type message..." autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+
+    <!-- Socket.IO client library -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- E2EE crypto helpers -->
+    <script src="crypto.js"></script>
+    <!-- Main chat logic -->
+    <script src="client.js"></script>
+  </body>
+</html>
