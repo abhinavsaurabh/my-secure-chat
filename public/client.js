@@ -5,26 +5,41 @@ let derivedAesKey = null;
 let currentUsername = null;
 
 /**
- * Initialize chat after user enters username & passphrase.
+ * Initializes the chat after the user enters a username & passphrase.
  */
 async function initializeChat(username, passphrase) {
-  // 1. Derive shared AES key from passphrase
+  // 1. Derive the shared AES key from the passphrase
   derivedAesKey = await deriveKeyFromPassphrase(passphrase);
   currentUsername = username;
 
   // 2. Connect to the server via Socket.IO (over HTTPS)
   socket = io({ secure: true, rejectUnauthorized: false });
 
-  // 3. Set username on the server
+  // 3. Send the chosen username to the server
   socket.emit('set username', currentUsername);
 
-  // 4. Listen for incoming encrypted messages
+  // 4. Listen for chat history from the server and display each message
+  socket.on('chat history', async (history) => {
+    for (const messageData of history) {
+      try {
+        const { iv, ciphertext, fromUser, timestamp } = messageData;
+        const plainText = await decryptMessage(iv, ciphertext, derivedAesKey);
+        // Convert timestamp to a local time string
+        const timeString = new Date(timestamp).toLocaleTimeString();
+        appendMessage(`[${timeString}] [${fromUser}] ${plainText}`);
+      } catch (err) {
+        console.error('Error decrypting chat history message:', err);
+      }
+    }
+  });
+
+  // 5. Listen for new incoming encrypted messages and display them
   socket.on('encrypted message', async (data) => {
-    // data = { iv, ciphertext, fromUser }
+    const { iv, ciphertext, fromUser, timestamp } = data;
     try {
-      const { iv, ciphertext, fromUser } = data;
       const plainText = await decryptMessage(iv, ciphertext, derivedAesKey);
-      appendMessage(`[${fromUser}] ${plainText}`);
+      const timeString = new Date(timestamp).toLocaleTimeString();
+      appendMessage(`[${timeString}] [${fromUser}] ${plainText}`);
     } catch (err) {
       console.error('Error decrypting message:', err);
     }
@@ -32,16 +47,16 @@ async function initializeChat(username, passphrase) {
 }
 
 /**
- * Encrypt and send a message via Socket.IO.
+ * Sends an encrypted message to the server.
  */
 async function sendEncryptedMessage(plainText) {
-  if (!derivedAesKey) return;
+  if (!derivedAesKey) return; // Not ready
   const encryptedData = await encryptMessage(plainText, derivedAesKey);
   socket.emit('encrypted message', encryptedData);
 }
 
 /**
- * Helper to append a message to chat box.
+ * Appends a message to the chat window.
  */
 function appendMessage(msg) {
   const messagesDiv = document.getElementById('messages');
@@ -51,8 +66,9 @@ function appendMessage(msg) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// -- UI Hooks --
+// ---- UI Setup ----
 
+// Handle "Join Chat" button click
 document.getElementById('joinBtn').addEventListener('click', async () => {
   const username = document.getElementById('username').value.trim();
   const passphrase = document.getElementById('passphrase').value.trim();
@@ -61,7 +77,7 @@ document.getElementById('joinBtn').addEventListener('click', async () => {
     return;
   }
 
-  // Initialize chat
+  // Initialize the chat and establish the connection
   await initializeChat(username, passphrase);
 
   // Hide the login section and show the chat section
@@ -69,6 +85,7 @@ document.getElementById('joinBtn').addEventListener('click', async () => {
   document.getElementById('chat-section').style.display = 'block';
 });
 
+// Handle sending a message via the chat form
 document.getElementById('messageForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const messageInput = document.getElementById('messageInput');
